@@ -106,15 +106,59 @@ def load_csv_track(path: str) -> list[dict]:
     return pts
 
 
+def load_kml_track(path: str) -> list[dict]:
+    """Parse a Flightradar24 KML export (gx:Track with <when>/<gx:coord>, or a plain LineString)."""
+    import xml.etree.ElementTree as ET
+
+    ns = {"k": "http://www.opengis.net/kml/2.2", "gx": "http://www.google.com/kml/ext/2.2"}
+    root = ET.parse(path).getroot()
+    pts = []
+    for tr in root.iter("{http://www.google.com/kml/ext/2.2}Track"):
+        whens = [w.text for w in tr.findall("k:when", ns)]
+        coords = [c.text for c in tr.findall("gx:coord", ns)]
+        for w, c in zip(whens, coords):
+            lon, lat, alt_m = (float(x) for x in c.split()[:3])
+            ts = int(datetime.strptime(w.strip()[:19], "%Y-%m-%dT%H:%M:%S").replace(tzinfo=timezone.utc).timestamp())
+            pts.append({"ts": ts, "lat": lat, "lon": lon, "alt_ft": alt_m * 3.28084, "gs_kt": 0, "track_deg": 0})
+    if not pts:  # LineString without times: cannot be time-matched to winds, but still gives geometry
+        for ls in root.iter("{http://www.opengis.net/kml/2.2}LineString"):
+            c = ls.find("k:coordinates", ns)
+            for i, trip in enumerate((c.text or "").split()):
+                lon, lat, alt_m = (float(x) for x in trip.split(",")[:3])
+                pts.append({"ts": i, "lat": lat, "lon": lon, "alt_ft": alt_m * 3.28084, "gs_kt": 0, "track_deg": 0})
+    pts.sort(key=lambda p: p["ts"])
+    # fill ground speed / course from consecutive fixes so cruise filtering and charts work
+    from geo import haversine_nm, initial_bearing
+
+    for a, b in zip(pts, pts[1:]):
+        dt = b["ts"] - a["ts"]
+        a["track_deg"] = initial_bearing(a["lat"], a["lon"], b["lat"], b["lon"])
+        a["gs_kt"] = haversine_nm(a["lat"], a["lon"], b["lat"], b["lon"]) / dt * 3600 if dt > 0 else 0
+    return pts
+
+
+def _date_from_name(path: str) -> str | None:
+    """Accept 2026-10-30_*.ext, 20261030*.ext or FR24's own KE82_<date>... names."""
+    base = os.path.basename(path)
+    m = re.search(r"(\d{4})-?(\d{2})-?(\d{2})", base)
+    return f"{m.group(1)}-{m.group(2)}-{m.group(3)}" if m else None
+
+
 def local_csv_tracks() -> dict[str, list[dict]]:
-    """{departure_date: track} for every CSV in data/tracks."""
+    """{departure_date: track} for every CSV/KML export in data/tracks."""
     out = {}
-    for path in sorted(glob.glob(os.path.join(TRACK_DIR, "*.csv"))):
-        m = re.match(r"(\d{4}-\d{2}-\d{2})", os.path.basename(path))
-        if not m:
-            print(f"skip {path}: name must start with YYYY-MM-DD", file=sys.stderr)
+    for path in sorted(glob.glob(os.path.join(TRACK_DIR, "*.csv")) + glob.glob(os.path.join(TRACK_DIR, "*.kml"))):
+        d = _date_from_name(path)
+        if not d:
+            print(f"skip {path}: name must contain the JFK departure date (YYYY-MM-DD)", file=sys.stderr)
             continue
-        out[m.group(1)] = load_csv_track(path)
+        try:
+            pts = load_kml_track(path) if path.lower().endswith(".kml") else load_csv_track(path)
+        except Exception as e:  # noqa: BLE001
+            print(f"skip {path}: {e}", file=sys.stderr)
+            continue
+        if pts:
+            out[d] = pts
     return out
 
 
