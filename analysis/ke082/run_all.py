@@ -80,17 +80,36 @@ def main() -> int:
 
     results = []
     for d in dates:
+        meta = dict(metas[d])
         track = tracks.get(d) or []
-        w = windmod.load_winds(d)
-        if track and w is None and not args.offline:
+        meta["track_source"] = "flightradar24" if track else None
+        if not track:
+            # No flown track: fall back to the JFK->ICN great circle as a reference line so the
+            # day's upper winds can still be evaluated. Clearly flagged in the output.
+            dep = meta.get("dep_real_utc") or meta.get("dep_sched_utc") or int(datetime.strptime(d, "%Y-%m-%d").replace(tzinfo=NY, hour=13).timestamp())
+            track = windmod.reference_route(dep, analyze.AIRPORTS["KJFK"], analyze.AIRPORTS[meta.get("destination_sched") or "RKSI"])
+            meta["track_source"] = "great_circle_reference"
+        w = windmod.load_winds(d) if meta["track_source"] == "flightradar24" else windmod.load_winds(d + "_ref")
+        if w is None and not args.offline:
             try:
                 w = windmod.fetch_winds_for_points(windmod.sample_track(track))
-                windmod.save_winds(d, w)
-                log(f"{d}: {len(w)} wind samples")
+                windmod.save_winds(d if meta["track_source"] == "flightradar24" else d + "_ref", w)
+                log(f"{d}: {len(w)} wind samples ({meta['track_source']})")
             except Exception as e:  # noqa: BLE001
                 errors.append(f"{d} winds: {e}")
                 w = None
-        results.append(analyze.analyze_flight(metas[d], track, w))
+        grid = windmod.load_grid(d)
+        if grid is None and not args.offline:
+            try:
+                mid = track[len(track) // 2]["ts"]
+                grid = windmod.fetch_wind_grid(mid)
+                windmod.save_grid(d, grid)
+                log(f"{d}: wind grid {len(grid)} points")
+            except Exception as e:  # noqa: BLE001
+                errors.append(f"{d} wind grid: {e}")
+        res = analyze.analyze_flight(meta, track, w)
+        res["wind_grid"] = grid
+        results.append(res)
 
     summary = {
         "generated_utc": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),

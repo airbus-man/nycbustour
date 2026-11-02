@@ -42,7 +42,8 @@ def analyze_flight(meta: dict, track: list[dict], winds: list[dict] | None) -> d
         "source": meta.get("source", "flightradar24"),
         "verified": meta.get("verified", True),
         "notes": meta.get("notes"),
-        "has_track": bool(track),
+        "track_source": meta.get("track_source") or ("flightradar24" if track else None),
+        "has_track": bool(track) and meta.get("track_source") != "great_circle_reference",
         "has_winds": bool(winds),
     }
     if meta.get("dep_real_utc") and meta.get("arr_real_utc"):
@@ -132,12 +133,14 @@ def analyze_flight(meta: dict, track: list[dict], winds: list[dict] | None) -> d
 def summarize(flights: list[dict]) -> dict:
     with_track = [f for f in flights if f.get("has_track")]
     with_wind = [f for f in flights if f.get("headwind_mean_kt") is not None]
+    s_ref = [f for f in flights if f.get("track_source") == "great_circle_reference"]
     s = {
         "n_flights": len(flights),
         "n_with_track": len(with_track),
         "n_with_winds": len(with_wind),
         "narita_dates": [f["date"] for f in flights if f.get("diverted_to_narita")],
         "diverted_dates": [f["date"] for f in flights if f.get("diverted")],
+        "n_reference_route": len(s_ref),
     }
     if with_track:
         n = max(with_track, key=lambda f: f["max_lat"])
