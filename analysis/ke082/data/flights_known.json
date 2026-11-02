@@ -1,0 +1,20 @@
+{
+  "_comment": "Hand-entered facts for the 7-day window (JFK departure dates, local). Filled from public web search snippets on 2026-11-02 because flightradar24.com / flightaware.com / skyscanner.com were blocked by the session network policy. verified=false means single-source and not cross-checked. Times are unix UTC. The pipeline overwrites these rows with Flightradar24 data when it can reach it.",
+  "flight_number": "KE82",
+  "callsign": "KAL82",
+  "window": {"start": "2026-10-26", "end": "2026-11-01"},
+  "schedule": {
+    "note": "Timetable per flightmapper.net / flight.info snippets: JFK 13:00-13:10 EDT -> ICN 17:45-17:50 KST (+1), ~15h40m. Schedule effective 2026-10-25 lists a 777-300ER, but the 2026-10-30 operation was reported as an A380 (HL7622).",
+    "dep_local_edt": "13:00",
+    "arr_local_kst": "17:45"
+  },
+  "flights": [
+    {"date": "2026-10-26", "origin": "KJFK", "destination_sched": "RKSI", "destination_real": null, "status_text": "unknown", "source": "none", "verified": false, "notes": "No public snippet found; needs Flightradar24 access."},
+    {"date": "2026-10-27", "origin": "KJFK", "destination_sched": "RKSI", "destination_real": null, "status_text": "unknown", "source": "none", "verified": false, "notes": "No public snippet found; needs Flightradar24 access."},
+    {"date": "2026-10-28", "origin": "KJFK", "destination_sched": "RKSI", "destination_real": null, "status_text": "unknown", "source": "none", "verified": false, "notes": "No public snippet found; needs Flightradar24 access."},
+    {"date": "2026-10-29", "origin": "KJFK", "destination_sched": "RKSI", "destination_real": null, "status_text": "unknown", "source": "none", "verified": false, "notes": "No public snippet found; needs Flightradar24 access."},
+    {"date": "2026-10-30", "origin": "KJFK", "destination_sched": "RKSI", "destination_real": "RJAA", "registration": "HL7622", "aircraft": "A388", "status_text": "Diverted to Tokyo Narita (NRT)", "dep_sched_utc": 1793379600, "dep_real_utc": 1793384040, "arr_sched_utc": 1793436300, "arr_real_utc": null, "source": "skyscanner.com flight-tracker (status: Diverted, NRT) + atlas.flexport.com (actual dep 14:14 EDT, A388 HL7622, no ICN arrival recorded)", "verified": false, "notes": "Only date in the window with a public record. Skyscanner shows arrival at NRT on Oct 31 at 17:36-17:45 local (two differing values). Cause of diversion not published."},
+    {"date": "2026-10-31", "origin": "KJFK", "destination_sched": "RKSI", "destination_real": null, "status_text": "unknown", "source": "none", "verified": false, "notes": "No public snippet found; needs Flightradar24 access."},
+    {"date": "2026-11-01", "origin": "KJFK", "destination_sched": "RKSI", "destination_real": null, "status_text": "unknown", "source": "none", "verified": false, "notes": "Winter timetable starts 2026-11-01 (12:00 EST dep, 777-300ER per flight.info). No public snippet found; needs Flightradar24 access."}
+  ]
+}
